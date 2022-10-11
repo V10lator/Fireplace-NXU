@@ -54,6 +54,8 @@ static uint32_t framebuf[WIDTH * HEIGHT];
 
 int main()
 {
+	WHBProcInit();
+
 	if (SDL_Init(SDL_INIT_VIDEO) == 0) {
 		int i;
 		uint32_t sum;
