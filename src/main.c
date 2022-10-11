@@ -11,7 +11,7 @@
 #include <whb/proc.h>
 
 #define WIDTH 640
-#define HEIGHT 72
+#define HEIGHT 54
 #define WIN_WIDTH 1280
 #define WIN_HEIGHT 720
 #define FPS 20
@@ -21,8 +21,8 @@
 static const uint32_t palette[256] = {
 /* Jare's original FirePal. */
 #define C(r,g,b) ((((uint32_t)((((r) * 4) << 16) | ((g) * 4 << 8) | ((b) * 4))) << 8) | 0xff)
-C( 0,   0,   0), C( 0,   1,   1), C( 0,   4,   5), C( 0,   7,   9),
-C( 0,   8,  11), C( 0,   9,  12), C(15,   6,   8), C(25,   4,   4),
+C( 0,   0,   0), C( 1,   0,   0), C( 5,   0,   0), C(10,   0,   0),
+C(15,   0,   0), C(18,   0,   0), C(21,   0,   0), C(25,   0,   0),
 C(33,   3,   3), C(40,   2,   2), C(48,   2,   2), C(55,   1,   1),
 C(63,   0,   0), C(63,   0,   0), C(63,   3,   0), C(63,   7,   0),
 C(63,  10,   0), C(63,  13,   0), C(63,  16,   0), C(63,  20,   0),
