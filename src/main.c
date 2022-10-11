@@ -110,6 +110,9 @@ int main()
 								//Setup renderer
 								SDL_Renderer* renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED);
 								if (renderer) {
+									SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "1");
+									SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_BLEND);
+
 									SDL_Texture * texture  = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_RGBA8888, SDL_TEXTUREACCESS_STREAMING, WIDTH, HEIGHT);
 									if (texture) {
 										int i;
