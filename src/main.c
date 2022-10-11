@@ -57,36 +57,32 @@ static uint32_t framebuf[WIDTH * HEIGHT];
 
 static size_t getFilesize(FILE *fp)
 {
-    struct stat info;
+	struct stat info;
 	return fstat(fileno(fp), &info) == -1 ? -1 : (size_t)(info.st_size);
 }
 
 size_t readFile(const char *path, void **buffer)
 {
-    FILE *file = fopen(path, "rb");
-    if(file != NULL)
-    {
-        size_t filesize = getFilesize(file);
-        if(filesize != (size_t)-1)
-        {
-            *buffer = MEMAllocFromDefaultHeapEx(FS_ALIGN(filesize), 0x40);
-            if(*buffer != NULL)
-            {
-                if(fread(*buffer, filesize, 1, file) == 1)
-                {
-                    fclose(file);
-                    return filesize;
-                }
+	FILE *file = fopen(path, "rb");
+	if (file != NULL) {
+		size_t filesize = getFilesize(file);
+		if (filesize != (size_t)-1) {
+			*buffer = MEMAllocFromDefaultHeapEx(FS_ALIGN(filesize), 0x40);
+			if (*buffer != NULL) {
+				if(fread(*buffer, filesize, 1, file) == 1) {
+					fclose(file);
+					return filesize;
+				}
 
-                MEMFreeToDefaultHeap(*buffer);
-            }
-        }
+				MEMFreeToDefaultHeap(*buffer);
+			}
+		}
 
-        fclose(file);
-    }
+		fclose(file);
+	}
 
-    *buffer = NULL;
-    return 0;
+	*buffer = NULL;
+	return 0;
 }
 
 int main()
