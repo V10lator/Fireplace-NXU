@@ -17,38 +17,44 @@
 #define FPS 20
 
 #define FS_ALIGN(x) ((x + 0x3F) & ~(0x3F))
+#define COLOR(r,g,b) ((((uint32_t)((((r) * 4) << 16) | ((g) * 4 << 8) | ((b) * 4))) << 8) | 0xFF)
+#define WHITE COLOR(0x255, 0x255, 0x255)
 
 static const uint32_t palette[256] = {
-/* Jare's original FirePal. */
-#define C(r,g,b) ((((uint32_t)((((r) * 4) << 16) | ((g) * 4 << 8) | ((b) * 4))) << 8) | 0xff)
-C( 0,   0,   0), C( 1,   0,   0), C( 5,   0,   0), C(10,   0,   0),
-C(15,   0,   0), C(18,   0,   0), C(21,   0,   0), C(25,   0,   0),
-C(33,   3,   3), C(40,   2,   2), C(48,   2,   2), C(55,   1,   1),
-C(63,   0,   0), C(63,   0,   0), C(63,   3,   0), C(63,   7,   0),
-C(63,  10,   0), C(63,  13,   0), C(63,  16,   0), C(63,  20,   0),
-C(63,  23,   0), C(63,  26,   0), C(63,  29,   0), C(63,  33,   0),
-C(63,  36,   0), C(63,  39,   0), C(63,  39,   0), C(63,  40,   0),
-C(63,  40,   0), C(63,  41,   0), C(63,  42,   0), C(63,  42,   0),
-C(63,  43,   0), C(63,  44,   0), C(63,  44,   0), C(63,  45,   0),
-C(63,  45,   0), C(63,  46,   0), C(63,  47,   0), C(63,  47,   0),
-C(63,  48,   0), C(63,  49,   0), C(63,  49,   0), C(63,  50,   0),
-C(63,  51,   0), C(63,  51,   0), C(63,  52,   0), C(63,  53,   0),
-C(63,  53,   0), C(63,  54,   0), C(63,  55,   0), C(63,  55,   0),
-C(63,  56,   0), C(63,  57,   0), C(63,  57,   0), C(63,  58,   0),
-C(63,  58,   0), C(63,  59,   0), C(63,  60,   0), C(63,  60,   0),
-C(63,  61,   0), C(63,  62,   0), C(63,  62,   0), C(63,  63,   0),
+/* A slightly modified version of Jare's FirePal. */
+COLOR( 0,   0,   0), COLOR( 1,   0,   0), COLOR( 5,   0,   0), COLOR(10,   0,   0),
+COLOR(15,   0,   0), COLOR(18,   0,   0), COLOR(21,   0,   0), COLOR(25,   0,   0),
+COLOR(33,   3,   3), COLOR(40,   2,   2), COLOR(48,   2,   2), COLOR(55,   1,   1),
+COLOR(63,   0,   0), COLOR(63,   0,   0), COLOR(63,   3,   0), COLOR(63,   7,   0),
+COLOR(63,  10,   0), COLOR(63,  13,   0), COLOR(63,  16,   0), COLOR(63,  20,   0),
+COLOR(63,  23,   0), COLOR(63,  26,   0), COLOR(63,  29,   0), COLOR(63,  33,   0),
+COLOR(63,  36,   0), COLOR(63,  39,   0), COLOR(63,  39,   0), COLOR(63,  40,   0),
+COLOR(63,  40,   0), COLOR(63,  41,   0), COLOR(63,  42,   0), COLOR(63,  42,   0),
+COLOR(63,  43,   0), COLOR(63,  44,   0), COLOR(63,  44,   0), COLOR(63,  45,   0),
+COLOR(63,  45,   0), COLOR(63,  46,   0), COLOR(63,  47,   0), COLOR(63,  47,   0),
+COLOR(63,  48,   0), COLOR(63,  49,   0), COLOR(63,  49,   0), COLOR(63,  50,   0),
+COLOR(63,  51,   0), COLOR(63,  51,   0), COLOR(63,  52,   0), COLOR(63,  53,   0),
+COLOR(63,  53,   0), COLOR(63,  54,   0), COLOR(63,  55,   0), COLOR(63,  55,   0),
+COLOR(63,  56,   0), COLOR(63,  57,   0), COLOR(63,  57,   0), COLOR(63,  58,   0),
+COLOR(63,  58,   0), COLOR(63,  59,   0), COLOR(63,  60,   0), COLOR(63,  60,   0),
+COLOR(63,  61,   0), COLOR(63,  62,   0), COLOR(63,  62,   0), COLOR(63,  63,   0),
 /* Followed by "white heat". */
-#define W C(63,63,63)
-W, W, W, W, W, W, W, W, W, W, W, W, W, W, W, W, W, W, W, W, W, W, W, W,
-W, W, W, W, W, W, W, W, W, W, W, W, W, W, W, W, W, W, W, W, W, W, W, W,
-W, W, W, W, W, W, W, W, W, W, W, W, W, W, W, W, W, W, W, W, W, W, W, W,
-W, W, W, W, W, W, W, W, W, W, W, W, W, W, W, W, W, W, W, W, W, W, W, W,
-W, W, W, W, W, W, W, W, W, W, W, W, W, W, W, W, W, W, W, W, W, W, W, W,
-W, W, W, W, W, W, W, W, W, W, W, W, W, W, W, W, W, W, W, W, W, W, W, W,
-W, W, W, W, W, W, W, W, W, W, W, W, W, W, W, W, W, W, W, W, W, W, W, W,
-W, W, W, W, W, W, W, W, W, W, W, W, W, W, W, W, W, W, W, W, W, W, W, W
-#undef W
-#undef C
+WHITE, WHITE, WHITE, WHITE, WHITE, WHITE, WHITE, WHITE, WHITE, WHITE, WHITE, WHITE,
+WHITE, WHITE, WHITE, WHITE, WHITE, WHITE, WHITE, WHITE, WHITE, WHITE, WHITE, WHITE,
+WHITE, WHITE, WHITE, WHITE, WHITE, WHITE, WHITE, WHITE, WHITE, WHITE, WHITE, WHITE,
+WHITE, WHITE, WHITE, WHITE, WHITE, WHITE, WHITE, WHITE, WHITE, WHITE, WHITE, WHITE,
+WHITE, WHITE, WHITE, WHITE, WHITE, WHITE, WHITE, WHITE, WHITE, WHITE, WHITE, WHITE,
+WHITE, WHITE, WHITE, WHITE, WHITE, WHITE, WHITE, WHITE, WHITE, WHITE, WHITE, WHITE,
+WHITE, WHITE, WHITE, WHITE, WHITE, WHITE, WHITE, WHITE, WHITE, WHITE, WHITE, WHITE,
+WHITE, WHITE, WHITE, WHITE, WHITE, WHITE, WHITE, WHITE, WHITE, WHITE, WHITE, WHITE,
+WHITE, WHITE, WHITE, WHITE, WHITE, WHITE, WHITE, WHITE, WHITE, WHITE, WHITE, WHITE,
+WHITE, WHITE, WHITE, WHITE, WHITE, WHITE, WHITE, WHITE, WHITE, WHITE, WHITE, WHITE,
+WHITE, WHITE, WHITE, WHITE, WHITE, WHITE, WHITE, WHITE, WHITE, WHITE, WHITE, WHITE,
+WHITE, WHITE, WHITE, WHITE, WHITE, WHITE, WHITE, WHITE, WHITE, WHITE, WHITE, WHITE,
+WHITE, WHITE, WHITE, WHITE, WHITE, WHITE, WHITE, WHITE, WHITE, WHITE, WHITE, WHITE,
+WHITE, WHITE, WHITE, WHITE, WHITE, WHITE, WHITE, WHITE, WHITE, WHITE, WHITE, WHITE,
+WHITE, WHITE, WHITE, WHITE, WHITE, WHITE, WHITE, WHITE, WHITE, WHITE, WHITE, WHITE,
+WHITE, WHITE, WHITE, WHITE, WHITE, WHITE, WHITE, WHITE, WHITE, WHITE, WHITE, WHITE
 };
 
 static uint8_t fire[WIDTH * HEIGHT];
