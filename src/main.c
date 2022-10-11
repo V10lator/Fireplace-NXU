@@ -1,5 +1,7 @@
+#include <coreinit/foreground.h>
 #include <coreinit/memdefaultheap.h>
 #include <gx2/event.h>
+#include <proc_ui/procui.h>
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_events.h>
 #include <SDL2/SDL_mixer.h>
@@ -7,8 +9,6 @@
 #include <stdio.h>
 #include <sys/stat.h>
 #include <sysapp/launch.h>
-
-#include <whb/proc.h>
 
 #define WIDTH 640
 #define HEIGHT 54
@@ -18,7 +18,7 @@
 
 #define FS_ALIGN(x) ((x + 0x3F) & ~(0x3F))
 #define COLOR(r,g,b) ((((uint32_t)((((r) * 4) << 16) | ((g) * 4 << 8) | ((b) * 4))) << 8) | 0xFF)
-#define WHITE COLOR(0x255, 0x255, 0x255)
+#define WHITE COLOR(63, 63, 63)
 
 static const uint32_t palette[256] = {
 /* A slightly modified version of Jare's FirePal. */
@@ -57,6 +57,7 @@ WHITE, WHITE, WHITE, WHITE, WHITE, WHITE, WHITE, WHITE, WHITE, WHITE, WHITE, WHI
 WHITE, WHITE, WHITE, WHITE, WHITE, WHITE, WHITE, WHITE, WHITE, WHITE, WHITE, WHITE
 };
 
+static volatile bool appRunning = true;
 static uint8_t fire[WIDTH * HEIGHT];
 static uint8_t prev_fire[WIDTH * HEIGHT];
 static uint32_t framebuf[WIDTH * HEIGHT];
@@ -86,9 +87,18 @@ static inline size_t readFile(const char *path, void **buffer)
 	return 0;
 }
 
+static uint32_t callHome(void *context)
+{
+	appRunning = false;
+	return 0;
+}
+
 int main()
 {
-	WHBProcInit();
+	ProcUIInit(&OSSavesDone_ReadyToRelease);
+	ProcUIRegisterCallback(PROCUI_CALLBACK_HOME_BUTTON_DENIED, &callHome, NULL, 100);
+	OSEnableHomeButtonMenu(false);
+	ProcUIStatus status = PROCUI_STATUS_RELEASE_FOREGROUND;
 
 	if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO) == 0) {
 		if (Mix_Init(MIX_INIT_OGG)) {
@@ -115,7 +125,7 @@ int main()
 										int i;
 										uint32_t sum;
 										uint8_t avg;
-										while(WHBProcIsRunning()) {
+										for (status = ProcUIProcessMessages(TRUE); appRunning && status != PROCUI_STATUS_EXITING && status != PROCUI_STATUS_RELEASE_FOREGROUND; status = ProcUIProcessMessages(TRUE)) {
 											for (i = WIDTH + 1; i < (HEIGHT - 1) * WIDTH - 1; i++) {
 												/* Average the eight neighbours. */
 												sum = prev_fire[i - WIDTH - 1] +
@@ -186,5 +196,16 @@ int main()
 		SDL_Quit();
 	}
 
+	if (!appRunning) {
+		SYSLaunchMenu();
+
+		do {
+			status = ProcUIProcessMessages(true);
+			if (status == PROCUI_STATUS_RELEASE_FOREGROUND)
+				ProcUIDrawDoneRelease();
+		} while (status != PROCUI_STATUS_EXITING);
+	}
+
+	ProcUIShutdown();
 	return 0;
 }
