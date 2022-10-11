@@ -1,0 +1,50 @@
+name: build
+
+on:
+  push:
+    branch:
+      - master
+
+jobs:
+  build-binary:
+    name: Build binary
+    runs-on: ubuntu-20.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+      - name: Build artifacts
+        run: |
+          docker build . -t builder
+          echo ${{ secrets.ENC_KEY }} > encryptKeyWith
+          docker run --rm -v ${PWD}:/project builder make
+      - name: Upload artifact
+        uses: actions/upload-artifact@v3
+        with:
+          path: ./Fireplace-WiiU.wuhb
+          if-no-files-found: error
+      - name: Prepare release
+        if: ${{ startsWith(github.event.head_commit.message, 'v') && contains(github.event.head_commit.message, '.') && !endsWith(github.event.head_commit.message, '.') }}
+        uses: actions/create-release@v1
+        with:
+          draft: false
+          prerelease: false
+          tag_name: ${{ github.event.head_commit.message }}
+          release_name: ${{ github.event.head_commit.message }}
+          body: |
+            Improvements to stability and usability:
+            Further improvements to overall stability and other minor adjustments have been made to enhance the user experience.
+        id: release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Upload release
+        if: ${{ startsWith(github.event.head_commit.message, 'v') && contains(github.event.head_commit.message, '.') && !endsWith(github.event.head_commit.message, '.') }}
+        uses: actions/upload-release-asset@v1
+        with:
+          upload_url: ${{ steps.release.outputs.upload_url }}
+          asset_name: Fireplace-WiiU.wuhb
+          asset_path: ./Fireplace-WiiU.wuhb
+          asset_content_type: application/octet-stream
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

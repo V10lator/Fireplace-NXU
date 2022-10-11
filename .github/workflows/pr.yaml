@@ -1,0 +1,24 @@
+name: build PRs
+
+on:
+  pull_request:
+    types: [ opened, reopened ]
+
+jobs:
+  build-binary:
+    name: build-binary
+    runs-on: ubuntu-20.04
+    steps:
+      - name: checkout
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+      - name: build artifacts
+        run: |
+          docker build . -t builder
+          docker run --rm -v ${PWD}:/project make
+      - name: Upload artifact
+        uses: actions/upload-artifact@v3
+        with:
+          path: ./Fireplace-WiiU.wuhb
+          if-no-files-found: error

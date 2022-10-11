@@ -15,7 +15,7 @@ include $(DEVKITPRO)/wut/share/wut_rules
 # SOURCES is a list of directories containing source code
 # INCLUDES is a list of directories containing header files
 #-------------------------------------------------------------------------------
-TARGET		:=	$(notdir $(CURDIR))
+TARGET		:=	Fireplace-WiiU
 BUILD		:=	build
 SOURCES		:=	src
 INCLUDES	:=	
