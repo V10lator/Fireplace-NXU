@@ -1,3 +1,4 @@
+#include <gx2/event.h>
 #include <iostream>
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_events.h>
@@ -6,11 +7,11 @@
 
 #include <whb/proc.h>
 
-#define WIDTH 128
+#define WIDTH 640
 #define HEIGHT 72
 #define WIN_WIDTH 1280
 #define WIN_HEIGHT 720
-#define FPS 60
+#define FPS 20
 
 using namespace std;
 
@@ -53,83 +54,80 @@ static uint32_t framebuf[WIDTH * HEIGHT];
 
 int main()
 {
-	SDL_Init(SDL_INIT_EVERYTHING);
-	
-	int i;
-	uint32_t sum;
-	uint8_t avg;
-   
-	//Setup window
-	SDL_Window* window = SDL_CreateWindow(nullptr, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, 0, 0, SDL_WINDOW_FULLSCREEN_DESKTOP);
-	if (!window) { SDL_Quit(); }
-	
-	//Setup renderer
-	SDL_Renderer* renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_SOFTWARE);
-	if (!renderer) { SDL_Quit(); }
+	if (SDL_Init(SDL_INIT_VIDEO) == 0) {
+		int i;
+		uint32_t sum;
+		uint8_t avg;
 
-	SDL_Texture * texture  = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_RGBA8888, SDL_TEXTUREACCESS_STREAMING, WIDTH, HEIGHT);
-	if (texture == NULL) {
-			fprintf(stderr, "Failed CreateTexture: %s\n", SDL_GetError());
-			return 1;
-	}
+		//Setup window
+		SDL_Window* window = SDL_CreateWindow(nullptr, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, 0, 0, SDL_WINDOW_FULLSCREEN_DESKTOP);
+		if (window) {
+			//Setup renderer
+			SDL_Renderer* renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED);
+			if (renderer) {
+				SDL_Texture * texture  = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_RGBA8888, SDL_TEXTUREACCESS_STREAMING, WIDTH, HEIGHT);
+				if (texture) {
+					while(WHBProcIsRunning()) {
+							for (i = WIDTH + 1; i < (HEIGHT - 1) * WIDTH - 1; i++) {
+									/* Average the eight neighbours. */
+									sum = prev_fire[i - WIDTH - 1] +
+										prev_fire[i - WIDTH    ] +
+										prev_fire[i - WIDTH + 1] +
+										prev_fire[i - 1] +
+										prev_fire[i + 1] +
+										prev_fire[i + WIDTH - 1] +
+										prev_fire[i + WIDTH    ] +
+										prev_fire[i + WIDTH + 1];
+									avg = (uint8_t)(sum / 8);
 
-	while(WHBProcIsRunning())
-	{			
-			for (i = WIDTH + 1; i < (HEIGHT - 1) * WIDTH - 1; i++) {
-					/* Average the eight neighbours. */
-					sum = prev_fire[i - WIDTH - 1] +
-						  prev_fire[i - WIDTH    ] +
-						  prev_fire[i - WIDTH + 1] +
-						  prev_fire[i - 1] +
-						  prev_fire[i + 1] +
-						  prev_fire[i + WIDTH - 1] +
-						  prev_fire[i + WIDTH    ] +
-						  prev_fire[i + WIDTH + 1];
-					avg = (uint8_t)(sum / 8);
+									/* "Cool" the pixel if the two bottom bits of the
+									sum are clear (somewhat random). For the bottom
+									rows, cooling can overflow, causing "sparks". */
+									if (!(sum & 3) &&
+										(avg > 0 || i >= (HEIGHT - 4) * WIDTH)) {
+											avg--;
+									}
+									fire[i] = avg;
+							}
 
-					/* "Cool" the pixel if the two bottom bits of the
-					   sum are clear (somewhat random). For the bottom
-					   rows, cooling can overflow, causing "sparks". */
-					if (!(sum & 3) &&
-						(avg > 0 || i >= (HEIGHT - 4) * WIDTH)) {
-							avg--;
+							/* Copy back and scroll up one row.
+							The bottom row is all zeros, so it can be skipped. */
+							for (i = 0; i < (HEIGHT - 2) * WIDTH; i++) {
+									prev_fire[i] = fire[i + WIDTH];
+							}
+
+							/* Remove dark pixels from the bottom rows (except again the
+							bottom row which is all zeros). */
+							for (i = (HEIGHT - 7) * WIDTH; i < (HEIGHT - 1) * WIDTH; i++) {
+									if (fire[i] < 15) {
+											fire[i] = 22 - fire[i];
+									}
+							}
+
+							/* Copy to framebuffer and map to RGBA, scrolling up one row. */
+							for (i = 0; i < (HEIGHT - 2) * WIDTH; i++) {
+									framebuf[i] = palette[fire[i + WIDTH]];
+							}
+
+							/* Update the texture and render it. */
+							SDL_UpdateTexture(texture, NULL, framebuf, WIDTH * sizeof(framebuf[0]));
+							SDL_RenderCopy(renderer, texture, NULL, NULL);
+							SDL_RenderPresent(renderer);
+
+							SDL_Delay(1000 / FPS);
 					}
-					fire[i] = avg;
+
+					SDL_DestroyTexture(texture);
+				}
+
+				SDL_DestroyRenderer(renderer);
 			}
 
-			/* Copy back and scroll up one row.
-			   The bottom row is all zeros, so it can be skipped. */
-			for (i = 0; i < (HEIGHT - 2) * WIDTH; i++) {
-					prev_fire[i] = fire[i + WIDTH];
-			}
+			SDL_DestroyWindow(window);
+		}
 
-			/* Remove dark pixels from the bottom rows (except again the
-			   bottom row which is all zeros). */
-			for (i = (HEIGHT - 7) * WIDTH; i < (HEIGHT - 1) * WIDTH; i++) {
-					if (fire[i] < 15) {
-							fire[i] = 22 - fire[i];
-					}
-			}
-
-			/* Copy to framebuffer and map to RGBA, scrolling up one row. */
-			for (i = 0; i < (HEIGHT - 2) * WIDTH; i++) {
-					framebuf[i] = palette[fire[i + WIDTH]];
-			}
-
-			/* Update the texture and render it. */
-			SDL_UpdateTexture(texture, NULL, framebuf, WIDTH * sizeof(framebuf[0]));
-			SDL_RenderClear(renderer);
-			SDL_RenderCopy(renderer, texture, NULL, NULL);
-			SDL_RenderPresent(renderer);
-
-			SDL_Delay(1000 / FPS);
+		SDL_Quit();
 	}
-
-	SDL_DestroyTexture(texture);
-	SDL_DestroyRenderer(renderer);
-	SDL_DestroyWindow(window);
-
-	SDL_Quit();
 
 	return 0;
 }
