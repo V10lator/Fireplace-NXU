@@ -17,7 +17,6 @@ jobs:
       - name: Build artifacts
         run: |
           docker build . -t builder
-          echo ${{ secrets.ENC_KEY }} > encryptKeyWith
           docker run --rm -v ${PWD}:/project builder make
       - name: Upload artifact
         uses: actions/upload-artifact@v3
