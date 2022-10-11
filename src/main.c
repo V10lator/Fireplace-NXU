@@ -1,6 +1,5 @@
 #include <coreinit/memdefaultheap.h>
 #include <gx2/event.h>
-#include <iostream>
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_events.h>
 #include <SDL2/SDL_mixer.h>
@@ -18,8 +17,6 @@
 #define FPS 20
 
 #define FS_ALIGN(x) ((x + 0x3F) & ~(0x3F))
-
-using namespace std;
 
 static const uint32_t palette[256] = {
 /* Jare's original FirePal. */
@@ -108,7 +105,7 @@ int main()
 						Mix_VolumeChunk(backgroundMusic, 100);
 						if(Mix_PlayChannel(0, backgroundMusic, -1) == 0) {
 							//Setup window
-							SDL_Window* window = SDL_CreateWindow(nullptr, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, 0, 0, SDL_WINDOW_FULLSCREEN_DESKTOP);
+							SDL_Window* window = SDL_CreateWindow(NULL, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, 0, 0, SDL_WINDOW_FULLSCREEN_DESKTOP);
 							if (window) {
 								//Setup renderer
 								SDL_Renderer* renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED);
