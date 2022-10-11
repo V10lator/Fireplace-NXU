@@ -20,5 +20,5 @@ jobs:
       - name: Upload artifact
         uses: actions/upload-artifact@v3
         with:
-          path: ./Fireplace-WiiU.wuhb
+          path: ./Fireplace-NXU.wuhb
           if-no-files-found: error
