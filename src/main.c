@@ -55,17 +55,12 @@ static uint8_t fire[WIDTH * HEIGHT];
 static uint8_t prev_fire[WIDTH * HEIGHT];
 static uint32_t framebuf[WIDTH * HEIGHT];
 
-static size_t getFilesize(FILE *fp)
-{
-	struct stat info;
-	return fstat(fileno(fp), &info) == -1 ? -1 : (size_t)(info.st_size);
-}
-
-size_t readFile(const char *path, void **buffer)
+static inline size_t readFile(const char *path, void **buffer)
 {
 	FILE *file = fopen(path, "rb");
 	if (file != NULL) {
-		size_t filesize = getFilesize(file);
+		struct stat info;
+		size_t filesize = fstat(fileno(file), &info) == -1 ? -1 : (size_t)(info.st_size);
 		if (filesize != (size_t)-1) {
 			*buffer = MEMAllocFromDefaultHeapEx(FS_ALIGN(filesize), 0x40);
 			if (*buffer != NULL) {
