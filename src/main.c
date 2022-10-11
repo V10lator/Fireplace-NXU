@@ -138,23 +138,19 @@ int main()
 												fire[i] = avg;
 											}
 
-											/* Copy back and scroll up one row.
-											The bottom row is all zeros, so it can be skipped. */
-											for (i = 0; i < (HEIGHT - 2) * WIDTH; i++) {
+											for (i = 0; i < (HEIGHT - 1) * WIDTH; i++) {
+												/* Copy back and scroll up one row.
+												The bottom row is all zeros, so it can be skipped. */
 												prev_fire[i] = fire[i + WIDTH];
-											}
 
-											/* Remove dark pixels from the bottom rows (except again the
-											bottom row which is all zeros). */
-											for (i = (HEIGHT - 7) * WIDTH; i < (HEIGHT - 1) * WIDTH; i++) {
-												if (fire[i] < 15) {
+												/* Remove dark pixels from the bottom rows (except again the
+												bottom row which is all zeros). */
+												if (i >= (HEIGHT - 7) * WIDTH && fire[i] < 15) {
 													fire[i] = 22 - fire[i];
 												}
-											}
 
-											/* Copy to framebuffer and map to RGBA, scrolling up one row. */
-											for (i = 0; i < (HEIGHT - 2) * WIDTH; i++) {
-												framebuf[i] = palette[fire[i + WIDTH]];
+												/* Copy to framebuffer and map to RGBA, scrolling up one row. */
+												framebuf[i + WIDTH] = palette[fire[i]];
 											}
 
 											/* Update the texture and render it. */
