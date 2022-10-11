@@ -93,6 +93,49 @@ static uint32_t callHome(void *context)
 	return 0;
 }
 
+static inline void drawFrame()
+{
+	uint32_t i;
+	uint32_t sum;
+	uint8_t avg;
+	for (i = WIDTH + 1; i < (HEIGHT - 1) * WIDTH - 1; i++) {
+		/* Average the eight neighbours. */
+		sum = prev_fire[i - WIDTH - 1] +
+			prev_fire[i - WIDTH    ] +
+			prev_fire[i - WIDTH + 1] +
+			prev_fire[i - 1] +
+			prev_fire[i + 1] +
+			prev_fire[i + WIDTH - 1] +
+			prev_fire[i + WIDTH    ] +
+			prev_fire[i + WIDTH + 1];
+		avg = (uint8_t)(sum / 8);
+
+		/* "Cool" the pixel if the two bottom bits of the
+		sum are clear (somewhat random). For the bottom
+		rows, cooling can overflow, causing "sparks". */
+		if (!(sum & 3) &&
+			(avg > 0 || i >= (HEIGHT - 4) * WIDTH)) {
+			avg--;
+		}
+		fire[i] = avg;
+	}
+
+	for (i = 0; i < (HEIGHT - 1) * WIDTH; i++) {
+		/* Copy back and scroll up one row.
+		The bottom row is all zeros, so it can be skipped. */
+		prev_fire[i] = fire[i + WIDTH];
+
+		/* Remove dark pixels from the bottom rows (except again the
+		bottom row which is all zeros). */
+		if (i >= (HEIGHT - 7) * WIDTH && fire[i] < 15) {
+			fire[i] = 22 - fire[i];
+		}
+
+		/* Copy to framebuffer and map to RGBA, scrolling up one row. */
+		framebuf[i + WIDTH] = palette[fire[i]];
+	}
+}
+
 int main()
 {
 	ProcUIInit(&OSSavesDone_ReadyToRelease);
@@ -122,46 +165,12 @@ int main()
 
 									SDL_Texture * texture  = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_RGBA8888, SDL_TEXTUREACCESS_STREAMING, WIDTH, HEIGHT);
 									if (texture) {
-										int i;
-										uint32_t sum;
-										uint8_t avg;
+										for (uint32_t i = 0; i < 512; i++) {
+											drawFrame();
+										}
+
 										for (status = ProcUIProcessMessages(TRUE); appRunning && status != PROCUI_STATUS_EXITING && status != PROCUI_STATUS_RELEASE_FOREGROUND; status = ProcUIProcessMessages(TRUE)) {
-											for (i = WIDTH + 1; i < (HEIGHT - 1) * WIDTH - 1; i++) {
-												/* Average the eight neighbours. */
-												sum = prev_fire[i - WIDTH - 1] +
-													prev_fire[i - WIDTH    ] +
-													prev_fire[i - WIDTH + 1] +
-													prev_fire[i - 1] +
-													prev_fire[i + 1] +
-													prev_fire[i + WIDTH - 1] +
-													prev_fire[i + WIDTH    ] +
-													prev_fire[i + WIDTH + 1];
-												avg = (uint8_t)(sum / 8);
-
-												/* "Cool" the pixel if the two bottom bits of the
-												sum are clear (somewhat random). For the bottom
-												rows, cooling can overflow, causing "sparks". */
-												if (!(sum & 3) &&
-													(avg > 0 || i >= (HEIGHT - 4) * WIDTH)) {
-														avg--;
-												}
-												fire[i] = avg;
-											}
-
-											for (i = 0; i < (HEIGHT - 1) * WIDTH; i++) {
-												/* Copy back and scroll up one row.
-												The bottom row is all zeros, so it can be skipped. */
-												prev_fire[i] = fire[i + WIDTH];
-
-												/* Remove dark pixels from the bottom rows (except again the
-												bottom row which is all zeros). */
-												if (i >= (HEIGHT - 7) * WIDTH && fire[i] < 15) {
-													fire[i] = 22 - fire[i];
-												}
-
-												/* Copy to framebuffer and map to RGBA, scrolling up one row. */
-												framebuf[i + WIDTH] = palette[fire[i]];
-											}
+											drawFrame();
 
 											/* Update the texture and render it. */
 											SDL_UpdateTexture(texture, NULL, framebuf, WIDTH * sizeof(framebuf[0]));
