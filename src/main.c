@@ -116,53 +116,53 @@ int main()
 										uint32_t sum;
 										uint8_t avg;
 										while(WHBProcIsRunning()) {
-												for (i = WIDTH + 1; i < (HEIGHT - 1) * WIDTH - 1; i++) {
-														/* Average the eight neighbours. */
-														sum = prev_fire[i - WIDTH - 1] +
-															prev_fire[i - WIDTH    ] +
-															prev_fire[i - WIDTH + 1] +
-															prev_fire[i - 1] +
-															prev_fire[i + 1] +
-															prev_fire[i + WIDTH - 1] +
-															prev_fire[i + WIDTH    ] +
-															prev_fire[i + WIDTH + 1];
-														avg = (uint8_t)(sum / 8);
+											for (i = WIDTH + 1; i < (HEIGHT - 1) * WIDTH - 1; i++) {
+												/* Average the eight neighbours. */
+												sum = prev_fire[i - WIDTH - 1] +
+													prev_fire[i - WIDTH    ] +
+													prev_fire[i - WIDTH + 1] +
+													prev_fire[i - 1] +
+													prev_fire[i + 1] +
+													prev_fire[i + WIDTH - 1] +
+													prev_fire[i + WIDTH    ] +
+													prev_fire[i + WIDTH + 1];
+												avg = (uint8_t)(sum / 8);
 
-														/* "Cool" the pixel if the two bottom bits of the
-														sum are clear (somewhat random). For the bottom
-														rows, cooling can overflow, causing "sparks". */
-														if (!(sum & 3) &&
-															(avg > 0 || i >= (HEIGHT - 4) * WIDTH)) {
-																avg--;
-														}
-														fire[i] = avg;
+												/* "Cool" the pixel if the two bottom bits of the
+												sum are clear (somewhat random). For the bottom
+												rows, cooling can overflow, causing "sparks". */
+												if (!(sum & 3) &&
+													(avg > 0 || i >= (HEIGHT - 4) * WIDTH)) {
+														avg--;
 												}
+												fire[i] = avg;
+											}
 
-												/* Copy back and scroll up one row.
-												The bottom row is all zeros, so it can be skipped. */
-												for (i = 0; i < (HEIGHT - 2) * WIDTH; i++) {
-														prev_fire[i] = fire[i + WIDTH];
+											/* Copy back and scroll up one row.
+											The bottom row is all zeros, so it can be skipped. */
+											for (i = 0; i < (HEIGHT - 2) * WIDTH; i++) {
+												prev_fire[i] = fire[i + WIDTH];
+											}
+
+											/* Remove dark pixels from the bottom rows (except again the
+											bottom row which is all zeros). */
+											for (i = (HEIGHT - 7) * WIDTH; i < (HEIGHT - 1) * WIDTH; i++) {
+												if (fire[i] < 15) {
+													fire[i] = 22 - fire[i];
 												}
+											}
 
-												/* Remove dark pixels from the bottom rows (except again the
-												bottom row which is all zeros). */
-												for (i = (HEIGHT - 7) * WIDTH; i < (HEIGHT - 1) * WIDTH; i++) {
-														if (fire[i] < 15) {
-																fire[i] = 22 - fire[i];
-														}
-												}
+											/* Copy to framebuffer and map to RGBA, scrolling up one row. */
+											for (i = 0; i < (HEIGHT - 2) * WIDTH; i++) {
+												framebuf[i] = palette[fire[i + WIDTH]];
+											}
 
-												/* Copy to framebuffer and map to RGBA, scrolling up one row. */
-												for (i = 0; i < (HEIGHT - 2) * WIDTH; i++) {
-														framebuf[i] = palette[fire[i + WIDTH]];
-												}
+											/* Update the texture and render it. */
+											SDL_UpdateTexture(texture, NULL, framebuf, WIDTH * sizeof(framebuf[0]));
+											SDL_RenderCopy(renderer, texture, NULL, NULL);
+											SDL_RenderPresent(renderer);
 
-												/* Update the texture and render it. */
-												SDL_UpdateTexture(texture, NULL, framebuf, WIDTH * sizeof(framebuf[0]));
-												SDL_RenderCopy(renderer, texture, NULL, NULL);
-												SDL_RenderPresent(renderer);
-
-												SDL_Delay(1000 / FPS);
+											SDL_Delay(1000 / FPS);
 										}
 
 										SDL_DestroyTexture(texture);
