@@ -1,5 +1,6 @@
 #include <coreinit/foreground.h>
 #include <coreinit/memdefaultheap.h>
+#include <coreinit/memory.h>
 #include <gx2/event.h>
 #include <proc_ui/procui.h>
 #include <SDL2/SDL.h>
@@ -77,6 +78,7 @@ static bool createBuffers()
 	if(fire == NULL)
 		return false;
 
+	OSBlockSet(fire, 0x00, (WIDTH * HEIGHT * 2) + (WIDTH * HEIGHT * sizeof(uint32_t)));
 	prev_fire = fire + (WIDTH * HEIGHT);
 	framebuf = (uint32_t *)(prev_fire + (WIDTH * HEIGHT));
 	return true;
