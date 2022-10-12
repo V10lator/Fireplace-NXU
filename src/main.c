@@ -58,9 +58,37 @@ WHITE, WHITE, WHITE, WHITE, WHITE, WHITE, WHITE, WHITE, WHITE, WHITE, WHITE, WHI
 };
 
 static volatile bool appRunning = true;
-static uint8_t fire[WIDTH * HEIGHT];
-static uint8_t prev_fire[WIDTH * HEIGHT];
-static uint32_t framebuf[WIDTH * HEIGHT];
+static uint8_t *fire;
+static uint8_t *prev_fire;
+static uint32_t *framebuf;
+
+static bool createBuffers()
+{
+	fire = MEMAllocFromDefaultHeap(WIDTH * HEIGHT);
+	if (fire != NULL)
+	{
+		prev_fire = MEMAllocFromDefaultHeap(WIDTH * HEIGHT);
+		if (prev_fire != NULL)
+		{
+			framebuf = MEMAllocFromDefaultHeap(WIDTH * HEIGHT * sizeof(uint32_t));
+			if (framebuf != NULL)
+				return true;
+
+			MEMFreeToDefaultHeap(prev_fire);
+		}
+
+		MEMFreeToDefaultHeap(fire);
+	}
+
+	return false;
+}
+
+static void destroyBuffers()
+{
+	MEMFreeToDefaultHeap(fire);
+	MEMFreeToDefaultHeap(prev_fire);
+	MEMFreeToDefaultHeap(framebuf);
+}
 
 static inline size_t readFile(const char *path, void **buffer)
 {
@@ -141,72 +169,87 @@ int main()
 	ProcUIInit(&OSSavesDone_ReadyToRelease);
 	ProcUIRegisterCallback(PROCUI_CALLBACK_HOME_BUTTON_DENIED, &callHome, NULL, 100);
 	OSEnableHomeButtonMenu(false);
-	ProcUIStatus status = PROCUI_STATUS_RELEASE_FOREGROUND;
+	ProcUIStatus status = ProcUIProcessMessages(true);
 
-	if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO) == 0) {
-		if (Mix_Init(MIX_INIT_OGG)) {
-			void *bgmBuffer;
-			size_t fs = readFile("/vol/content/audio/bg.ogg", &bgmBuffer);
-			if (bgmBuffer != NULL) {
-				if (Mix_OpenAudio(22050, AUDIO_S16MSB, 2, 4096) == 0) {
-					SDL_RWops *rw = SDL_RWFromMem(bgmBuffer, fs);
-					Mix_Chunk *backgroundMusic = Mix_LoadWAV_RW(rw, true);
-					if(backgroundMusic != NULL) {
-						Mix_VolumeChunk(backgroundMusic, 100);
-						if(Mix_PlayChannel(0, backgroundMusic, -1) == 0) {
-							//Setup window
-							SDL_Window* window = SDL_CreateWindow(NULL, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, 0, 0, SDL_WINDOW_FULLSCREEN_DESKTOP);
-							if (window) {
-								//Setup renderer
-								SDL_Renderer* renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED);
-								if (renderer) {
-									SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "1");
-									SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_BLEND);
+	if (createBuffers())
+	{
+		if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO) == 0) {
+			if (Mix_Init(MIX_INIT_OGG)) {
+				void *bgmBuffer;
+				size_t fs = readFile("/vol/content/audio/bg.ogg", &bgmBuffer);
+				if (bgmBuffer != NULL) {
+					if (Mix_OpenAudio(22050, AUDIO_S16MSB, 2, 4096) == 0) {
+						SDL_RWops *rw = SDL_RWFromMem(bgmBuffer, fs);
+						Mix_Chunk *backgroundMusic = Mix_LoadWAV_RW(rw, true);
+						if(backgroundMusic != NULL) {
+							Mix_VolumeChunk(backgroundMusic, 100);
+							if(Mix_PlayChannel(0, backgroundMusic, -1) == 0) {
+								//Setup window
+								SDL_Window* window = SDL_CreateWindow(NULL, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, 0, 0, SDL_WINDOW_FULLSCREEN_DESKTOP);
+								if (window) {
+									//Setup renderer
+									SDL_Renderer* renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED);
+									if (renderer) {
+										SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "1");
+										SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_BLEND);
 
-									SDL_Texture * texture  = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_RGBA8888, SDL_TEXTUREACCESS_STREAMING, WIDTH, HEIGHT);
-									if (texture) {
-										for (uint32_t i = 0; i < 512; i++) {
-											drawFrame();
+										SDL_Texture * texture  = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_RGBA8888, SDL_TEXTUREACCESS_STREAMING, WIDTH, HEIGHT);
+										if (texture) {
+											for (uint32_t i = 0; i < 512; i++) {
+												drawFrame();
+											}
+
+											while (appRunning) {
+												status = ProcUIProcessMessages(true);
+												if (status != PROCUI_STATUS_IN_FOREGROUND)
+													break;
+
+												drawFrame();
+
+												/* Update the texture and render it. */
+												SDL_UpdateTexture(texture, NULL, framebuf, WIDTH * sizeof(framebuf[0]));
+												SDL_RenderCopy(renderer, texture, NULL, NULL);
+												SDL_RenderPresent(renderer);
+
+												SDL_Delay(1000 / FPS);
+											}
+
+											SDL_DestroyTexture(texture);
 										}
 
-										for (status = ProcUIProcessMessages(TRUE); appRunning && status != PROCUI_STATUS_EXITING && status != PROCUI_STATUS_RELEASE_FOREGROUND; status = ProcUIProcessMessages(TRUE)) {
-											drawFrame();
-
-											/* Update the texture and render it. */
-											SDL_UpdateTexture(texture, NULL, framebuf, WIDTH * sizeof(framebuf[0]));
-											SDL_RenderCopy(renderer, texture, NULL, NULL);
-											SDL_RenderPresent(renderer);
-
-											SDL_Delay(1000 / FPS);
-										}
-
-										SDL_DestroyTexture(texture);
+										SDL_DestroyRenderer(renderer);
 									}
 
-									SDL_DestroyRenderer(renderer);
+									SDL_DestroyWindow(window);
 								}
 
-								SDL_DestroyWindow(window);
+								Mix_HaltChannel(0);
 							}
 
-							Mix_HaltChannel(0);
+							Mix_FreeChunk(backgroundMusic);
 						}
 
-						Mix_FreeChunk(backgroundMusic);
+						Mix_CloseAudio();
 					}
 
-					Mix_CloseAudio();
+					MEMFreeToDefaultHeap(bgmBuffer);
 				}
-
-				MEMFreeToDefaultHeap(bgmBuffer);
 			}
+
+			SDL_Quit();
 		}
 
-		SDL_Quit();
+		destroyBuffers();
 	}
 
 	if (!appRunning) {
 		SYSLaunchMenu();
+	}
+
+	if (status != PROCUI_STATUS_EXITING) {
+		if (status == PROCUI_STATUS_RELEASE_FOREGROUND) {
+			ProcUIDrawDoneRelease();
+		}
 
 		do {
 			status = ProcUIProcessMessages(true);
