@@ -20,7 +20,7 @@ BUILD		:=	build
 SOURCES		:=	src
 INCLUDES	:=	
 CONTENT		:=	content
-ICON		:=
+ICON		:=	wuhb/iconTex.tga
 TV_SPLASH	:=
 DRC_SPLASH	:=
 
