@@ -1,6 +1,8 @@
 #include <coreinit/foreground.h>
 #include <coreinit/memdefaultheap.h>
 #include <coreinit/memory.h>
+#include <coreinit/thread.h>
+#include <coreinit/time.h>
 #include <gx2/event.h>
 #include <proc_ui/procui.h>
 #include <SDL2/SDL.h>
@@ -58,8 +60,14 @@ WHITE, WHITE, WHITE, WHITE, WHITE, WHITE, WHITE, WHITE, WHITE, WHITE, WHITE, WHI
 WHITE, WHITE, WHITE, WHITE, WHITE, WHITE, WHITE, WHITE, WHITE, WHITE, WHITE, WHITE
 };
 
-static volatile bool appRunning = true;
-static uint8_t *fire;
+static bool sdlInit = false;
+static void *bgmBuffer = NULL;
+static Mix_Chunk *backgroundMusic = NULL;
+static SDL_Window* window = NULL;
+static SDL_Renderer* renderer = NULL;
+static SDL_Texture *texture = NULL;
+
+static uint8_t *fire = NULL;
 static uint8_t *prev_fire;
 static uint32_t *framebuf;
 
@@ -70,21 +78,6 @@ void __preinit_user(MEMHeapHandle *mem1, MEMHeapHandle *fg, MEMHeapHandle *mem2)
 {
 	__init_wut_malloc();
 }
-
-// Create buffers needed. As we use coreinits malloc we allocate one buffer and split it up
-static bool createBuffers()
-{
-	fire = MEMAllocFromDefaultHeap((WIDTH * HEIGHT * 2) + (WIDTH * HEIGHT * sizeof(uint32_t)));
-	if(fire == NULL)
-		return false;
-
-	OSBlockSet(fire, 0x00, (WIDTH * HEIGHT * 2) + (WIDTH * HEIGHT * sizeof(uint32_t)));
-	prev_fire = fire + (WIDTH * HEIGHT);
-	framebuf = (uint32_t *)(prev_fire + (WIDTH * HEIGHT));
-	return true;
-}
-
-#define destroyBuffers() MEMFreeToDefaultHeap(fire)
 
 // A function to read a file, needed to load the audio
 static inline size_t readFile(const char *path, void **buffer)
@@ -109,12 +102,6 @@ static inline size_t readFile(const char *path, void **buffer)
 	}
 
 	*buffer = NULL;
-	return 0;
-}
-
-static uint32_t callHome(void *context)
-{
-	appRunning = false;
 	return 0;
 }
 
@@ -160,102 +147,135 @@ static inline void drawFrame()
 	}
 }
 
-int main()
+void deinit()
 {
-	ProcUIInit(&OSSavesDone_ReadyToRelease);
-	ProcUIRegisterCallback(PROCUI_CALLBACK_HOME_BUTTON_DENIED, &callHome, NULL, 100);
-	OSEnableHomeButtonMenu(false);
-	ProcUIStatus status = ProcUIProcessMessages(true);
-
-	if (createBuffers())
-	{
-		if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO) == 0) {
-			if (Mix_Init(MIX_INIT_OGG)) {
-				// Load audio
-				void *bgmBuffer;
-				size_t fs = readFile("/vol/content/audio/bg.ogg", &bgmBuffer);
-				if (bgmBuffer != NULL) {
-					if (Mix_OpenAudio(22050, AUDIO_S16MSB, 2, 4096) == 0) {
-						SDL_RWops *rw = SDL_RWFromMem(bgmBuffer, fs);
-						Mix_Chunk *backgroundMusic = Mix_LoadWAV_RW(rw, true);
-						if(backgroundMusic != NULL) {
-							Mix_VolumeChunk(backgroundMusic, 100);
-							if(Mix_PlayChannel(0, backgroundMusic, -1) == 0) {
-								// Setup window
-								SDL_Window* window = SDL_CreateWindow(NULL, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, 0, 0, SDL_WINDOW_FULLSCREEN_DESKTOP);
-								if (window) {
-									// Setup renderer
-									SDL_Renderer* renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED);
-									if (renderer) {
-										// Enable HQ upscaling
-										SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "1");
-										SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_BLEND);
-
-										SDL_Texture * texture  = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_RGBA8888, SDL_TEXTUREACCESS_STREAMING, WIDTH, HEIGHT);
-										if (texture) {
-											// Draw 512 frames off-screen
-											for (uint32_t i = 0; i < 512; i++) {
-												drawFrame();
-											}
-
-											// Main loop
-											while (appRunning) {
-												status = ProcUIProcessMessages(true);
-												if (status != PROCUI_STATUS_IN_FOREGROUND)
-													break;
-
-												drawFrame();
-
-												/* Update the texture and render it. */
-												SDL_UpdateTexture(texture, NULL, framebuf, WIDTH * sizeof(framebuf[0]));
-												SDL_RenderCopy(renderer, texture, NULL, NULL);
-												SDL_RenderPresent(renderer);
-
-												SDL_Delay(1000 / FPS);
-											}
-
-											SDL_DestroyTexture(texture);
-										}
-
-										SDL_DestroyRenderer(renderer);
-									}
-
-									SDL_DestroyWindow(window);
-								}
-
-								Mix_HaltChannel(0);
-							}
-
-							Mix_FreeChunk(backgroundMusic);
-						}
-
-						Mix_CloseAudio();
-					}
-
-					MEMFreeToDefaultHeap(bgmBuffer);
-				}
+	if (sdlInit) {
+		if (bgmBuffer != NULL) {
+			if (backgroundMusic != NULL) {
+				Mix_HaltChannel(0);
+				Mix_FreeChunk(backgroundMusic);
+				Mix_CloseAudio();
+				backgroundMusic = NULL;
 			}
 
-			SDL_Quit();
+			MEMFreeToDefaultHeap(bgmBuffer);
+			bgmBuffer = NULL;
 		}
 
-		destroyBuffers();
-	}
+		if (window != NULL) {
+			if (renderer != NULL) {
+				if (texture != NULL) {
+					SDL_DestroyTexture(texture);
+					texture = NULL;
+				}
 
-	if (!appRunning) {
-		SYSLaunchMenu();
-	}
+				SDL_DestroyRenderer(renderer);
+				renderer = NULL;
+			}
 
-	if (status != PROCUI_STATUS_EXITING) {
-		if (status == PROCUI_STATUS_RELEASE_FOREGROUND) {
-			ProcUIDrawDoneRelease();
+			SDL_DestroyWindow(window);
+			window = NULL;
 		}
 
-		do {
-			status = ProcUIProcessMessages(true);
-			if (status == PROCUI_STATUS_RELEASE_FOREGROUND)
+		SDL_Quit();
+		sdlInit = false;
+	}
+
+	if(fire != NULL)
+	{
+		MEMFreeToDefaultHeap(fire);
+		fire = NULL;
+	}
+}
+
+static void init() {
+	fire = MEMAllocFromDefaultHeap((WIDTH * HEIGHT * 2) + (WIDTH * HEIGHT * sizeof(uint32_t)));
+	if(fire == NULL)
+		return;
+
+	OSBlockSet(fire, 0x00, (WIDTH * HEIGHT * 2) + (WIDTH * HEIGHT * sizeof(uint32_t)));
+	prev_fire = fire + (WIDTH * HEIGHT);
+	framebuf = (uint32_t *)(prev_fire + (WIDTH * HEIGHT));
+
+	if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO) == 0) {
+		sdlInit = true;
+		if (Mix_Init(MIX_INIT_OGG)) {
+			// Load audio
+			size_t fs = readFile("/vol/content/audio/bg.ogg", &bgmBuffer);
+			if (bgmBuffer != NULL) {
+				if (Mix_OpenAudio(22050, AUDIO_S16MSB, 2, 4096) == 0) {
+					SDL_RWops *rw = SDL_RWFromMem(bgmBuffer, fs);
+					backgroundMusic = Mix_LoadWAV_RW(rw, true);
+					if(backgroundMusic != NULL) {
+						Mix_VolumeChunk(backgroundMusic, 100);
+						if(Mix_PlayChannel(0, backgroundMusic, -1) == 0) {
+							// Setup window
+							window = SDL_CreateWindow(NULL, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, 0, 0, SDL_WINDOW_FULLSCREEN_DESKTOP);
+							if (window) {
+								// Setup renderer
+								renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED);
+								if (renderer) {
+									// Enable HQ upscaling
+									SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "1");
+									SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_BLEND);
+
+									texture  = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_RGBA8888, SDL_TEXTUREACCESS_STREAMING, WIDTH, HEIGHT);
+									if (texture) {
+										// Draw 512 frames off-screen
+										for (uint32_t i = 0; i < 512; i++) {
+											drawFrame();
+										}
+
+										return;
+									}
+								}
+							}
+						}
+					}
+				}
+			}
+		}
+	}
+
+	deinit();
+}
+
+int main()
+{
+	ProcUIInit(OSSavesDone_ReadyToRelease);
+	bool running = true;;
+
+	while (running) {
+		switch (ProcUIProcessMessages(true)) {
+			case PROCUI_STATUS_IN_FOREGROUND:
+				if (fire == NULL) {
+					init();
+				}
+				if (fire != NULL) {
+					drawFrame();
+					SDL_UpdateTexture(texture, NULL, framebuf, WIDTH * sizeof(framebuf[0]));
+					SDL_RenderCopy(renderer, texture, NULL, NULL);
+					SDL_RenderPresent(renderer);
+					SDL_Delay(1000 / FPS);
+				}
+				break;
+			case PROCUI_STATUS_RELEASE_FOREGROUND:
+				if (fire != NULL) {
+					deinit();
+				}
 				ProcUIDrawDoneRelease();
-		} while (status != PROCUI_STATUS_EXITING);
+				break;
+			case PROCUI_STATUS_IN_BACKGROUND:
+				OSSleepTicks(OSMillisecondsToTicks(20));
+				break;
+			case PROCUI_STATUS_EXITING:
+				running = false;
+				break;
+		}
+	}
+
+	if (fire != NULL) {
+		deinit();
 	}
 
 	ProcUIShutdown();
