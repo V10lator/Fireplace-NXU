@@ -147,7 +147,7 @@ static inline void drawFrame()
 	}
 }
 
-void deinit()
+static void deinit()
 {
 	if (sdlInit) {
 		if (bgmBuffer != NULL) {
