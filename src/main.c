@@ -64,11 +64,13 @@ static uint32_t *framebuf;
 
 extern void __init_wut_malloc();
 
+// We don't do mucb mallocs, so WUTs fast malloc is overkill. Use coreinit instead
 void __preinit_user(MEMHeapHandle *mem1, MEMHeapHandle *fg, MEMHeapHandle *mem2)
 {
     __init_wut_malloc();
 }
 
+// Create buffers needed. As we use coreinits malloc we allocate one buffer and split it up
 static bool createBuffers()
 {
 	fire = MEMAllocFromDefaultHeap((WIDTH * HEIGHT * 2) + (WIDTH * HEIGHT * sizeof(uint32_t)));
@@ -82,6 +84,7 @@ static bool createBuffers()
 
 #define destroyBuffers() MEMFreeToDefaultHeap(fire)
 
+// A function to read a file, needed to load the audio
 static inline size_t readFile(const char *path, void **buffer)
 {
 	FILE *file = fopen(path, "rb");
@@ -113,6 +116,7 @@ static uint32_t callHome(void *context)
 	return 0;
 }
 
+// This function draws one frame. It's based on Javier "Jare" Arévalo's firedemo from 1993
 static inline void drawFrame()
 {
 	uint32_t i;
@@ -167,6 +171,7 @@ int main()
 	{
 		if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO) == 0) {
 			if (Mix_Init(MIX_INIT_OGG)) {
+				// Load audio
 				void *bgmBuffer;
 				size_t fs = readFile("/vol/content/audio/bg.ogg", &bgmBuffer);
 				if (bgmBuffer != NULL) {
@@ -176,21 +181,24 @@ int main()
 						if(backgroundMusic != NULL) {
 							Mix_VolumeChunk(backgroundMusic, 100);
 							if(Mix_PlayChannel(0, backgroundMusic, -1) == 0) {
-								//Setup window
+								// Setup window
 								SDL_Window* window = SDL_CreateWindow(NULL, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, 0, 0, SDL_WINDOW_FULLSCREEN_DESKTOP);
 								if (window) {
-									//Setup renderer
+									// Setup renderer
 									SDL_Renderer* renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED);
 									if (renderer) {
+										// Enable HQ upscaling
 										SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "1");
 										SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_BLEND);
 
 										SDL_Texture * texture  = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_RGBA8888, SDL_TEXTUREACCESS_STREAMING, WIDTH, HEIGHT);
 										if (texture) {
+											// Draw 512 frames off-screen
 											for (uint32_t i = 0; i < 512; i++) {
 												drawFrame();
 											}
 
+											// Main loop
 											while (appRunning) {
 												status = ProcUIProcessMessages(true);
 												if (status != PROCUI_STATUS_IN_FOREGROUND)
