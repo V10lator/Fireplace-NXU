@@ -62,33 +62,25 @@ static uint8_t *fire;
 static uint8_t *prev_fire;
 static uint32_t *framebuf;
 
+extern void __init_wut_malloc();
+
+void __preinit_user(MEMHeapHandle *mem1, MEMHeapHandle *fg, MEMHeapHandle *mem2)
+{
+    __init_wut_malloc();
+}
+
 static bool createBuffers()
 {
-	fire = MEMAllocFromDefaultHeap(WIDTH * HEIGHT);
-	if (fire != NULL)
-	{
-		prev_fire = MEMAllocFromDefaultHeap(WIDTH * HEIGHT);
-		if (prev_fire != NULL)
-		{
-			framebuf = MEMAllocFromDefaultHeap(WIDTH * HEIGHT * sizeof(uint32_t));
-			if (framebuf != NULL)
-				return true;
+	fire = MEMAllocFromDefaultHeap((WIDTH * HEIGHT * 2) + (WIDTH * HEIGHT * sizeof(uint32_t)));
+	if(fire == NULL)
+		return false;
 
-			MEMFreeToDefaultHeap(prev_fire);
-		}
-
-		MEMFreeToDefaultHeap(fire);
-	}
-
-	return false;
+	prev_fire = fire + (WIDTH * HEIGHT);
+	framebuf = (uint32_t *)(prev_fire + (WIDTH * HEIGHT));
+	return true;
 }
 
-static void destroyBuffers()
-{
-	MEMFreeToDefaultHeap(fire);
-	MEMFreeToDefaultHeap(prev_fire);
-	MEMFreeToDefaultHeap(framebuf);
-}
+#define destroyBuffers() MEMFreeToDefaultHeap(fire)
 
 static inline size_t readFile(const char *path, void **buffer)
 {
