@@ -64,10 +64,10 @@ static uint32_t *framebuf;
 
 extern void __init_wut_malloc();
 
-// We don't do mucb mallocs, so WUTs fast malloc is overkill. Use coreinit instead
+// We don't do much mallocs, so WUTs fast malloc is overkill. Use coreinit instead
 void __preinit_user(MEMHeapHandle *mem1, MEMHeapHandle *fg, MEMHeapHandle *mem2)
 {
-    __init_wut_malloc();
+	__init_wut_malloc();
 }
 
 // Create buffers needed. As we use coreinits malloc we allocate one buffer and split it up
