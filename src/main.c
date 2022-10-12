@@ -121,7 +121,6 @@ static inline void drawFrame()
 {
 	uint32_t i;
 	uint32_t sum;
-	uint8_t avg;
 	for (i = WIDTH + 1; i < (HEIGHT - 1) * WIDTH - 1; i++) {
 		/* Average the eight neighbours. */
 		sum = prev_fire[i - WIDTH - 1] +
@@ -132,16 +131,15 @@ static inline void drawFrame()
 			prev_fire[i + WIDTH - 1] +
 			prev_fire[i + WIDTH    ] +
 			prev_fire[i + WIDTH + 1];
-		avg = (uint8_t)(sum / 8);
+		fire[i] = (uint8_t)(sum / 8);
 
 		/* "Cool" the pixel if the two bottom bits of the
 		sum are clear (somewhat random). For the bottom
 		rows, cooling can overflow, causing "sparks". */
 		if (!(sum & 3) &&
-			(avg > 0 || i >= (HEIGHT - 4) * WIDTH)) {
-			avg--;
+			(fire[i] > 0 || i >= (HEIGHT - 4) * WIDTH)) {
+			fire[i]--;
 		}
-		fire[i] = avg;
 	}
 
 	for (i = 0; i < (HEIGHT - 1) * WIDTH; i++) {
