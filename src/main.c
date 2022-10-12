@@ -167,7 +167,6 @@ static void deinit()
 					window = NULL;
 				}
 
-				Mix_HaltChannel(0);
 				Mix_FreeChunk(backgroundMusic);
 				Mix_CloseAudio();
 				backgroundMusic = NULL;
@@ -260,9 +259,10 @@ int main()
 				}
 				break;
 			case PROCUI_STATUS_RELEASE_FOREGROUND:
-				if (fire != NULL) {
-					deinit();
-				}
+// TODO: SDL bug
+//				if (fire != NULL) {
+//					deinit();
+//				}
 				ProcUIDrawDoneRelease();
 				break;
 			case PROCUI_STATUS_IN_BACKGROUND:
@@ -274,9 +274,10 @@ int main()
 		}
 	}
 
-	if (fire != NULL) {
-		deinit();
-	}
+// TODO: SDL bug
+//	if (fire != NULL) {
+//		deinit();
+//	}
 
 	ProcUIShutdown();
 	return 0;
