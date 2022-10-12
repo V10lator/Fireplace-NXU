@@ -152,6 +152,21 @@ static void deinit()
 	if (sdlInit) {
 		if (bgmBuffer != NULL) {
 			if (backgroundMusic != NULL) {
+				if (window != NULL) {
+					if (renderer != NULL) {
+						if (texture != NULL) {
+							SDL_DestroyTexture(texture);
+							texture = NULL;
+						}
+
+						SDL_DestroyRenderer(renderer);
+						renderer = NULL;
+					}
+
+					SDL_DestroyWindow(window);
+					window = NULL;
+				}
+
 				Mix_HaltChannel(0);
 				Mix_FreeChunk(backgroundMusic);
 				Mix_CloseAudio();
@@ -160,21 +175,6 @@ static void deinit()
 
 			MEMFreeToDefaultHeap(bgmBuffer);
 			bgmBuffer = NULL;
-		}
-
-		if (window != NULL) {
-			if (renderer != NULL) {
-				if (texture != NULL) {
-					SDL_DestroyTexture(texture);
-					texture = NULL;
-				}
-
-				SDL_DestroyRenderer(renderer);
-				renderer = NULL;
-			}
-
-			SDL_DestroyWindow(window);
-			window = NULL;
 		}
 
 		SDL_Quit();
@@ -219,7 +219,7 @@ static void init() {
 									SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "1");
 									SDL_SetRenderDrawBlendMode(renderer, SDL_BLENDMODE_BLEND);
 
-									texture  = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_RGBA8888, SDL_TEXTUREACCESS_STREAMING, WIDTH, HEIGHT);
+									texture = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_RGBA8888, SDL_TEXTUREACCESS_STREAMING, WIDTH, HEIGHT);
 									if (texture) {
 										// Draw 512 frames off-screen
 										for (uint32_t i = 0; i < 512; i++) {
