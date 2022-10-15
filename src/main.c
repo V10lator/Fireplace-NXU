@@ -131,17 +131,17 @@ static inline void drawFrame()
 		}
 	}
 
-	for (i = 0; i < (HEIGHT - 1) * WIDTH; i++) {
-		/* Copy back and scroll up one row. */
-		prev_fire[i] = fire[i + WIDTH];
-
+	for (i = 0, sum = WIDTH; i < (HEIGHT - 1) * WIDTH; i++, sum++) {
 		/* Remove dark pixels from the bottom rows */
 		if (i >= (HEIGHT - 7) * WIDTH && fire[i] < 15) {
 			fire[i] = 30 - fire[i];
 		}
 
+		/* Copy back and scroll up one row. */
+		prev_fire[i] = fire[sum];
+
 		/* Copy to framebuffer and map to RGBA, scrolling up one row. */
-		framebuf[i + WIDTH] = palette[fire[i]];
+		framebuf[sum] = palette[fire[i]];
 	}
 }
 
