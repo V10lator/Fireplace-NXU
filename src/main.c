@@ -21,7 +21,7 @@
 
 #define FS_ALIGN(x) ((x + 0x3F) & ~(0x3F))
 #define COLOR(r,g,b) ((((uint32_t)((((r) * 4) << 16) | ((g) * 4 << 8) | ((b) * 4))) << 8) | 0xFF)
-#define WHITE COLOR(63, 63, 63)
+#define WHITE COLOR(63, 63, 40)
 
 static const uint32_t palette[256] = {
 /* A slightly modified version of Jare's FirePal. */
@@ -139,7 +139,7 @@ static inline void drawFrame()
 		/* Remove dark pixels from the bottom rows (except again the
 		bottom row which is all zeros). */
 		if (i >= (HEIGHT - 7) * WIDTH && fire[i] < 15) {
-			fire[i] = 22 - fire[i];
+			fire[i] = 30 - fire[i];
 		}
 
 		/* Copy to framebuffer and map to RGBA, scrolling up one row. */
