@@ -112,14 +112,22 @@ static inline void drawFrame()
 	uint32_t sum;
 	for (i = WIDTH + 1; i < (HEIGHT - 1) * WIDTH - 1; i++) {
 		/* Average the eight neighbours. */
-		sum = prev_fire[i - WIDTH - 1] +
-			prev_fire[i - WIDTH    ] +
-			prev_fire[i - WIDTH + 1] +
-			prev_fire[i - 1] +
-			prev_fire[i + 1] +
-			prev_fire[i + WIDTH - 1] +
-			prev_fire[i + WIDTH    ] +
-			prev_fire[i + WIDTH + 1];
+		// Left pixel of 2nd row
+		sum = prev_fire[--i];
+		// Top row
+		i -= WIDTH;
+		sum += prev_fire[i++];
+		sum += prev_fire[i++];
+		sum += prev_fire[i];
+		// Bottom row
+		i += (WIDTH * 2) - 2;
+		sum += prev_fire[i++];
+		sum += prev_fire[i++];
+		sum += prev_fire[i];
+		// Right pixel as second row + reset i
+		i -= WIDTH;
+		sum += prev_fire[i--];
+		// Average result
 		fire[i] = (uint8_t)(sum / 8);
 
 		/* "Cool" the pixel if the two bottom bits of the
