@@ -132,12 +132,10 @@ static inline void drawFrame()
 	}
 
 	for (i = 0; i < (HEIGHT - 1) * WIDTH; i++) {
-		/* Copy back and scroll up one row.
-		The bottom row is all zeros, so it can be skipped. */
+		/* Copy back and scroll up one row. */
 		prev_fire[i] = fire[i + WIDTH];
 
-		/* Remove dark pixels from the bottom rows (except again the
-		bottom row which is all zeros). */
+		/* Remove dark pixels from the bottom rows */
 		if (i >= (HEIGHT - 7) * WIDTH && fire[i] < 15) {
 			fire[i] = 30 - fire[i];
 		}
