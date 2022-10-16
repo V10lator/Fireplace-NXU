@@ -21,9 +21,8 @@
 
 #define FS_ALIGN(x) ((x + 0x3F) & ~(0x3F))
 #define COLOR(r,g,b) ((((uint32_t)((((r) * 4) << 16) | ((g) * 4 << 8) | ((b) * 4))) << 8) | 0xFF)
-#define WHITE COLOR(63, 63, 40)
 
-static const uint32_t palette[256] = {
+static const uint32_t palette[64] = {
 /* A slightly modified version of Jare's FirePal. */
 COLOR( 0,   0,   0), COLOR( 1,   0,   0), COLOR( 5,   0,   0), COLOR(10,   0,   0),
 COLOR(15,   0,   0), COLOR(18,   0,   0), COLOR(21,   0,   0), COLOR(25,   0,   0),
@@ -41,23 +40,6 @@ COLOR(63,  53,   0), COLOR(63,  54,   0), COLOR(63,  55,   0), COLOR(63,  55,   
 COLOR(63,  56,   0), COLOR(63,  57,   0), COLOR(63,  57,   0), COLOR(63,  58,   0),
 COLOR(63,  58,   0), COLOR(63,  59,   0), COLOR(63,  60,   0), COLOR(63,  60,   0),
 COLOR(63,  61,   0), COLOR(63,  62,   0), COLOR(63,  62,   0), COLOR(63,  63,   0),
-/* Followed by "white heat". */
-WHITE, WHITE, WHITE, WHITE, WHITE, WHITE, WHITE, WHITE, WHITE, WHITE, WHITE, WHITE,
-WHITE, WHITE, WHITE, WHITE, WHITE, WHITE, WHITE, WHITE, WHITE, WHITE, WHITE, WHITE,
-WHITE, WHITE, WHITE, WHITE, WHITE, WHITE, WHITE, WHITE, WHITE, WHITE, WHITE, WHITE,
-WHITE, WHITE, WHITE, WHITE, WHITE, WHITE, WHITE, WHITE, WHITE, WHITE, WHITE, WHITE,
-WHITE, WHITE, WHITE, WHITE, WHITE, WHITE, WHITE, WHITE, WHITE, WHITE, WHITE, WHITE,
-WHITE, WHITE, WHITE, WHITE, WHITE, WHITE, WHITE, WHITE, WHITE, WHITE, WHITE, WHITE,
-WHITE, WHITE, WHITE, WHITE, WHITE, WHITE, WHITE, WHITE, WHITE, WHITE, WHITE, WHITE,
-WHITE, WHITE, WHITE, WHITE, WHITE, WHITE, WHITE, WHITE, WHITE, WHITE, WHITE, WHITE,
-WHITE, WHITE, WHITE, WHITE, WHITE, WHITE, WHITE, WHITE, WHITE, WHITE, WHITE, WHITE,
-WHITE, WHITE, WHITE, WHITE, WHITE, WHITE, WHITE, WHITE, WHITE, WHITE, WHITE, WHITE,
-WHITE, WHITE, WHITE, WHITE, WHITE, WHITE, WHITE, WHITE, WHITE, WHITE, WHITE, WHITE,
-WHITE, WHITE, WHITE, WHITE, WHITE, WHITE, WHITE, WHITE, WHITE, WHITE, WHITE, WHITE,
-WHITE, WHITE, WHITE, WHITE, WHITE, WHITE, WHITE, WHITE, WHITE, WHITE, WHITE, WHITE,
-WHITE, WHITE, WHITE, WHITE, WHITE, WHITE, WHITE, WHITE, WHITE, WHITE, WHITE, WHITE,
-WHITE, WHITE, WHITE, WHITE, WHITE, WHITE, WHITE, WHITE, WHITE, WHITE, WHITE, WHITE,
-WHITE, WHITE, WHITE, WHITE, WHITE, WHITE, WHITE, WHITE, WHITE, WHITE, WHITE, WHITE
 };
 
 static bool sdlInit = false;
@@ -148,8 +130,9 @@ static inline void drawFrame()
 		/* Copy back and scroll up one row. */
 		prev_fire[i] = fire[sum];
 
-		/* Copy to framebuffer and map to RGBA, scrolling up one row. */
-		framebuf[sum] = palette[fire[i]];
+		/* Copy to framebuffer and map to RGBA. Use WHITE
+		pixel in case of overflows and copy up one row. */
+		framebuf[sum] = fire[i] < 64 ? palette[fire[i]] : COLOR(63, 63, 40);
 	}
 }
 
