@@ -67,13 +67,12 @@ static inline size_t readFile(const char *path, void **buffer)
 	FILE *file = fopen(path, "rb");
 	if (file != NULL) {
 		struct stat info;
-		size_t filesize = fstat(fileno(file), &info) == -1 ? -1 : (size_t)(info.st_size);
-		if (filesize != (size_t)-1) {
-			*buffer = MEMAllocFromDefaultHeapEx(FS_ALIGN(filesize), 0x40);
+		if (fstat(fileno(file), &info) != -1) {
+			*buffer = MEMAllocFromDefaultHeapEx(FS_ALIGN(info.st_size), 0x40);
 			if (*buffer != NULL) {
-				if(fread(*buffer, filesize, 1, file) == 1) {
+				if(fread(*buffer, info.st_size, 1, file) == 1) {
 					fclose(file);
-					return filesize;
+					return info.st_size;
 				}
 
 				MEMFreeToDefaultHeap(*buffer);
